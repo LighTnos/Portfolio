@@ -2,10 +2,12 @@ import React, { useEffect, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 import emailjs from '@emailjs/browser'
 
-const EMAILJS_SERVICE = import.meta.env.VITE_EMAILJS_SERVICE
-const EMAILJS_TEMPLATE_NOTIFY = import.meta.env.VITE_EMAILJS_TEMPLATE_NOTIFY
-const EMAILJS_TEMPLATE_REPLY = import.meta.env.VITE_EMAILJS_TEMPLATE_REPLY
-const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+// EmailJS IDs are public client-side values (visible in any deployed bundle).
+// Env vars override these defaults when set (e.g. on Vercel).
+const EMAILJS_SERVICE = import.meta.env.VITE_EMAILJS_SERVICE || 'service_8cctnhu'
+const EMAILJS_TEMPLATE_NOTIFY = import.meta.env.VITE_EMAILJS_TEMPLATE_NOTIFY || 'template_768n46f'
+const EMAILJS_TEMPLATE_REPLY = import.meta.env.VITE_EMAILJS_TEMPLATE_REPLY || 'template_aeoi6tr'
+const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'PmxjXETZdjK-nqiM_'
 
 const ContactPopup = ({ isOpen, onClose }) => {
     const overlayRef = useRef(null)
