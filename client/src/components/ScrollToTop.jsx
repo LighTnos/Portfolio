@@ -36,10 +36,11 @@ const ScrollToTop = () => {
   }, [isVisible])
 
   const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    })
+    if (window.lenis) {
+      window.lenis.scrollTo(0, { duration: 1.2 })
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
   }
 
   if (!isVisible) return null
@@ -50,7 +51,7 @@ const ScrollToTop = () => {
       onClick={scrollToTop}
       className="fixed bottom-8 right-8 z-50 w-12 h-12 rounded-full flex items-center justify-center
                  backdrop-blur-xl bg-white/10 border border-white/20
-                 hover:bg-white/15 hover:border-white/30
+                 hover:bg-white/15 hover:border-white/30 hover:scale-110 active:scale-95
                  transition-all duration-300
                  shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
       aria-label="Scroll to top"

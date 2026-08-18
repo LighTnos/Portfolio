@@ -31,13 +31,28 @@ const options = {
 
 const isProd = process.env.NODE_ENV === 'production'
 
-mongoose.connect(connectionString, options)
-    .then(() => {
-        if (!isProd) console.log('✅ MongoDB connected:', mongoose.connection.db?.databaseName || DB_NAME)
-    })
-    .catch((err) => {
-        console.error('❌ MongoDB connection failed:', err.code || err.name)
-    })
+// Mongoose does not retry a failed *initial* connect on its own, so if the
+// server starts before MongoDB is ready, projects never load until a manual
+// restart. Retry with backoff instead.
+const MAX_RETRIES = 5
+const RETRY_DELAY_MS = 3000
+
+function connectWithRetry(attempt = 1) {
+    return mongoose.connect(connectionString, options)
+        .then(() => {
+            if (!isProd) console.log('✅ MongoDB connected:', mongoose.connection.db?.databaseName || DB_NAME)
+        })
+        .catch((err) => {
+            console.error(`❌ MongoDB connection failed (attempt ${attempt}/${MAX_RETRIES}):`, err.code || err.name)
+            if (attempt < MAX_RETRIES) {
+                setTimeout(() => connectWithRetry(attempt + 1), RETRY_DELAY_MS * attempt)
+            } else {
+                console.error('❌ Giving up — check that MongoDB is running and MONGODB_URI is correct.')
+            }
+        })
+}
+
+connectWithRetry()
 
 mongoose.connection.on('error', (err) => {
     console.error('❌ MongoDB error:', err.code || err.name)

@@ -1,21 +1,27 @@
 @import "tailwindcss";
 
 @layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
   html {
     scroll-behavior: smooth;
     scroll-padding-top: 80px; /* offset for fixed navbar */
-    overflow-x: hidden;
     /* smoother font rendering */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
-  body {
-    overflow-x: hidden;
+
+  html, body, #root {
+    background-color: #0C0C0C;
   }
+
   html, body, * {
-    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
-    letter-spacing: -0.03em;
+    font-family: 'Kanit', system-ui, -apple-system, sans-serif;
   }
 
   /* smooth all interactive elements */
@@ -34,22 +40,89 @@
   }
 }
 
-/* ── Pill text-glow shine — sweeps L→R then R→L ── */
-@keyframes pill-text-shine {
-  0%   { background-position: 200% center; }
-  50%  { background-position: -200% center; }
-  100% { background-position: 200% center; }
+/* ── Gradient hero heading text ── */
+.hero-heading {
+  background: linear-gradient(180deg, #646973 0%, #BBCCD7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-/* ── Global noise overlay ── */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.22;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 150 150' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.95' numOctaves='12' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 64px 64px;
+/* ── Hero heading characters — per-char gradient clip + sheen layer.
+     The clip lives on each char (not the h1) because compositing
+     transformed children breaks parent background-clip: text in Chrome. ── */
+.hero-char {
+  background-image:
+    linear-gradient(100deg, transparent 38%, rgba(255, 255, 255, 0.55) 50%, transparent 62%),
+    linear-gradient(180deg, #646973 0%, #BBCCD7 100%);
+  background-size: 250% 100%, 100% 100%;
+  background-position: 160% 0, 0 0;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── Hero avatar canvas — height capped by viewport so the head
+     never rides up into the navbar on short screens ── */
+.hero-avatar {
+  height: 380px;
+}
+@media (min-width: 640px) {
+  .hero-avatar {
+    height: min(460px, calc(100vh - 130px));
+  }
+}
+@media (min-width: 768px) {
+  .hero-avatar {
+    height: min(540px, calc(100vh - 130px));
+  }
+}
+@media (min-width: 1024px) {
+  .hero-avatar {
+    height: min(600px, calc(100vh - 130px));
+  }
+}
+
+/* ── Shimmer sweep for small hero labels ── */
+.shimmer-text {
+  background: linear-gradient(
+    110deg,
+    rgba(215, 226, 234, 0.55) 0%,
+    rgba(215, 226, 234, 0.55) 38%,
+    #ffffff 50%,
+    rgba(215, 226, 234, 0.55) 62%,
+    rgba(215, 226, 234, 0.55) 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer-sweep 4.5s ease-in-out infinite;
+}
+@keyframes shimmer-sweep {
+  0%,
+  35% {
+    background-position: 130% 0;
+  }
+  75%,
+  100% {
+    background-position: -30% 0;
+  }
+}
+
+/* ── Ticker outlined text (hollow letters) ── */
+.ticker-outline {
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(187, 204, 215, 0.4);
+}
+
+/* ── Sticky project card stack — responsive sticky offset ── */
+.stack-card {
+  --stack-top: 6rem; /* top-24 */
+}
+@media (min-width: 768px) {
+  .stack-card {
+    --stack-top: 8rem; /* md:top-32 */
+  }
 }

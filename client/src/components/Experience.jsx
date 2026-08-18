@@ -83,8 +83,8 @@ const Experience = () => {
         {/* ── Heading ── */}
         <h2
           ref={headingRef}
-          className="text-3xl sm:text-4xl lg:text-5xl font-medium text-white mb-10 sm:mb-14"
-          style={{ letterSpacing: '-0.03em' }}
+          className="hero-heading font-black uppercase text-center leading-none tracking-tight mb-12 sm:mb-16 md:mb-20"
+          style={{ fontSize: 'clamp(3rem, 12vw, 160px)' }}
         >
           Experience
         </h2>
@@ -98,38 +98,37 @@ const Experience = () => {
               className="flex flex-col sm:flex-row sm:items-start sm:justify-between
                          gap-2 sm:gap-8
                          py-6 sm:py-8 lg:py-9
-                         border-t border-white/[0.08]
-                         last:border-b last:border-white/[0.08]
-                         group"
+                         border-t border-[#D7E2EA]/15
+                         last:border-b last:border-[#D7E2EA]/15
+                         group cursor-default transition-colors duration-300 hover:border-[#D7E2EA]/40"
             >
               {/* Left: Role + description */}
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5 transition-transform duration-300 group-hover:translate-x-2">
                 <span
-                  className="text-white/80 font-light text-base sm:text-xl lg:text-2xl
-                             group-hover:text-white transition-colors duration-300"
-                  style={{ letterSpacing: '-0.03em' }}
+                  className="font-medium uppercase text-[#D7E2EA] transition-colors duration-300 group-hover:text-white"
+                  style={{ fontSize: 'clamp(1rem, 2.2vw, 2.1rem)' }}
                 >
                   {item.role}
                 </span>
                 <p
-                  className="text-white/35 font-light text-xs sm:text-sm leading-relaxed max-w-md"
-                  style={{ letterSpacing: '-0.01em' }}
+                  className="font-light leading-relaxed max-w-md transition-colors duration-300 group-hover:text-[rgba(215,226,234,0.75)]"
+                  style={{ color: 'rgba(215,226,234,0.5)', fontSize: 'clamp(0.85rem, 1.6vw, 1.25rem)' }}
                 >
                   {item.description}
                 </p>
               </div>
 
               {/* Right: Company + Period */}
-              <div className="sm:text-right shrink-0">
+              <div className="sm:text-right shrink-0 transition-transform duration-300 group-hover:-translate-x-1">
                 <p
-                  className="text-white/60 font-light text-sm sm:text-base"
-                  style={{ letterSpacing: '-0.02em' }}
+                  className="font-light uppercase tracking-wider transition-colors duration-300 group-hover:text-white"
+                  style={{ color: 'rgba(215,226,234,0.75)', fontSize: 'clamp(0.85rem, 1.6vw, 1.15rem)' }}
                 >
                   {item.company}
                 </p>
                 <p
-                  className="text-white/30 font-light text-xs sm:text-sm mt-0.5"
-                  style={{ letterSpacing: '-0.01em' }}
+                  className="font-light mt-0.5"
+                  style={{ color: 'rgba(215,226,234,0.4)', fontSize: 'clamp(0.75rem, 1.4vw, 1rem)' }}
                 >
                   {item.period}
                 </p>

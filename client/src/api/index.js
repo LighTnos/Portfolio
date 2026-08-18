@@ -29,7 +29,7 @@ async function request(endpoint, options = {}) {
     let response
     try {
         response = await fetch(url, config)
-    } catch (error) {
+    } catch {
         throw {
             status: 0,
             message: 'Network error: Unable to connect to server.',
@@ -44,7 +44,7 @@ async function request(endpoint, options = {}) {
         try {
             const text = await response.text()
             data = text ? JSON.parse(text) : {}
-        } catch (parseError) {
+        } catch {
             throw {
                 status: response.status,
                 message: 'Invalid response from server',
@@ -164,7 +164,7 @@ export const uploadImage = async (file) => {
         try {
             const text = await response.text()
             data = text ? JSON.parse(text) : {}
-        } catch (parseError) {
+        } catch {
             throw {
                 status: response.status,
                 message: 'Invalid response from server',

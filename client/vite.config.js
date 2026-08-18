@@ -1,26 +1,51 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-  ],
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  // Point dev at the hosted backend by default; set DEV_PROXY_TARGET=http://localhost:5000
+  // in client/.env to work against a local server instead.
+  const proxyTarget = env.DEV_PROXY_TARGET || 'https://portfolio-qpkw.onrender.com'
+  const isRemote = proxyTarget.startsWith('https')
 
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
-      },
-      '/uploads': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
+  const proxyOptions = {
+    target: proxyTarget,
+    changeOrigin: true,
+    // Remote backend rejects localhost origins (CORS) — drop the header, the
+    // proxy makes it a same-origin request from the browser's perspective.
+    configure: (proxy) => {
+      proxy.on('proxyReq', (proxyReq) => {
+        if (isRemote) proxyReq.removeHeader('origin')
+      })
+    },
+  }
+
+  return {
+    plugins: [
+      react(),
+      tailwindcss(),
+    ],
+
+    server: {
+      proxy: {
+        '/api': {
+          ...proxyOptions,
+          rewrite: (path) => path.replace(/^\/api/, ''),
+        },
+        '/uploads': { ...proxyOptions },
       },
     },
-  },
+
+    preview: {
+      proxy: {
+        '/api': {
+          ...proxyOptions,
+          rewrite: (path) => path.replace(/^\/api/, ''),
+        },
+        '/uploads': { ...proxyOptions },
+      },
+    },
 
   build: {
     // Raise warning threshold to 600kb (Three.js chunks are large by nature)
@@ -59,4 +84,5 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom', 'gsap', 'lenis'],
   },
+  }
 })

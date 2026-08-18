@@ -15,7 +15,7 @@ const AdminLogin = () => {
       try {
         await getAnalytics()
         navigate('/admin/dashboard')
-      } catch (err) {
+      } catch {
         // Not logged in, stay on login page
       }
     }
@@ -44,7 +44,7 @@ const AdminLogin = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: '#000' }}>
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: '#0C0C0C' }}>
       <SEO
         title="Admin Login | Lightnos.dev"
         description="Admin access to Lightnos.dev portfolio dashboard"
@@ -52,9 +52,9 @@ const AdminLogin = () => {
       {/* Background glow */}
       <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
         <div className="absolute w-[400px] h-[400px] rounded-full opacity-15"
-          style={{ backgroundColor: '#8B5CF6', filter: 'blur(100px)', left: '30%', top: '20%' }} />
+          style={{ backgroundColor: '#B600A8', filter: 'blur(100px)', left: '30%', top: '20%' }} />
         <div className="absolute w-[300px] h-[300px] rounded-full opacity-10"
-          style={{ backgroundColor: '#93C5FD', filter: 'blur(80px)', right: '20%', bottom: '30%' }} />
+          style={{ backgroundColor: '#7621B0', filter: 'blur(80px)', right: '20%', bottom: '30%' }} />
       </div>
 
       <div className="relative z-10 w-full max-w-md">
@@ -124,14 +124,16 @@ const AdminLogin = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-2xl font-medium text-white text-sm transition-all duration-300"
+                className="w-full rounded-full font-medium text-white text-sm uppercase tracking-widest transition-all duration-300"
                 style={{
                   padding: '14px',
-                  background: 'rgba(255,255,255,0.09)',
-                  border: '1px solid rgba(255,255,255,0.18)',
+                  background: 'linear-gradient(123deg, #18011F 7%, #B600A8 37%, #7621B0 72%, #BE4C00 100%)',
+                  boxShadow: '0px 4px 4px rgba(181, 1, 167, 0.25), 4px 4px 12px #7721B1 inset',
+                  outline: '2px solid #FFFFFF',
+                  outlineOffset: '-3px',
+                  border: 'none',
                   cursor: loading ? 'not-allowed' : 'pointer',
                   opacity: loading ? 0.55 : 1,
-                  letterSpacing: '-0.02em',
                 }}
               >
                 {loading ? (

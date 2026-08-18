@@ -2,6 +2,10 @@ import React, { useRef, useEffect, useState } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { getProjects, trackProjectView, BACKEND_URL } from '../api'
+import FadeIn from './ui/FadeIn.jsx'
+import LiveProjectButton from './ui/LiveProjectButton.jsx'
+
+gsap.registerPlugin(ScrollTrigger)
 
 const safeUrl = (url) => {
   if (!url) return null
@@ -13,210 +17,302 @@ const safeUrl = (url) => {
   }
 }
 
-gsap.registerPlugin(ScrollTrigger)
-
-const NAV_H = 72
-
-// Gradient presets for project cards
-const GRADIENTS = [
-  'linear-gradient(135deg, rgba(56,139,253,0.15) 0%, rgba(139,92,246,0.12) 60%, rgba(10,211,245,0.08) 100%), rgb(6,8,13)',
-  'linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(6,182,212,0.12) 60%, rgba(99,102,241,0.08) 100%), rgb(6,8,13)',
-  'linear-gradient(135deg, rgba(245,158,11,0.14) 0%, rgba(244,63,94,0.11) 60%, rgba(139,92,246,0.08) 100%), rgb(6,8,13)',
-  'linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(56,139,253,0.12) 60%, rgba(16,185,129,0.08) 100%), rgb(6,8,13)',
-  'linear-gradient(135deg, rgba(244,63,94,0.15) 0%, rgba(245,158,11,0.12) 60%, rgba(56,139,253,0.08) 100%), rgb(6,8,13)',
+// Subtle gradient fills for placeholder image panels
+const PANEL_GRADIENTS = [
+  'linear-gradient(135deg, rgba(182,0,168,0.25) 0%, rgba(118,33,176,0.2) 55%, rgba(190,76,0,0.15) 100%), #101014',
+  'linear-gradient(135deg, rgba(118,33,176,0.25) 0%, rgba(182,0,168,0.15) 60%, rgba(24,1,31,0.6) 100%), #101014',
+  'linear-gradient(135deg, rgba(190,76,0,0.2) 0%, rgba(182,0,168,0.18) 55%, rgba(118,33,176,0.2) 100%), #101014',
 ]
 
-// ── Icons ─────────────────────────────────────────────────────────────────────
-const GithubIcon = () => (
-  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-    <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-  </svg>
-)
+const CACHE_KEY = 'portfolio_projects'
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
-const ExternalIcon = () => (
-  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-  </svg>
-)
+const getCachedProjects = () => {
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+    const { data, ts } = JSON.parse(raw)
+    if (Date.now() - ts > CACHE_TTL) return null
+    return data
+  } catch {
+    return null
+  }
+}
 
-// ── Card UI ───────────────────────────────────────────────────────────────────
-const CardContent = ({ project, isMobile, onProjectClick }) => (
-  <div
-    className="group relative w-full h-full rounded-2xl overflow-hidden border border-white/10"
-    style={{ background: project.gradient }}
-  >
-    {isMobile ? (
-      /* ── Mobile layout: stacked ── */
-      <div className="flex flex-col h-full">
-        {/* Image or decorative header area */}
-        <div className="relative w-full shrink-0 overflow-hidden" style={{ height: '140px' }}>
-          {project.imageUrl ? (
+const setCachedProjects = (data) => {
+  try {
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() }))
+  } catch {
+    /* storage full — ignore */
+  }
+}
+
+const resolveImage = (imageUrl) => {
+  if (!imageUrl) return null
+  return imageUrl.startsWith('http') ? imageUrl : `${BACKEND_URL}${imageUrl}`
+}
+
+// ── Single stacking card ──────────────────────────────────────────────────────
+const ProjectCard = ({ project, index, total, sectionRef, onProjectClick }) => {
+  const wrapperRef = useRef(null)
+  const cardRef = useRef(null)
+
+  useEffect(() => {
+    const wrapper = wrapperRef.current
+    const card = cardRef.current
+    const section = sectionRef.current
+    if (!wrapper || !card || !section) return
+
+    const targetScale = 1 - (total - 1 - index) * 0.06
+
+    const ctx = gsap.context(() => {
+      // Deal-in: card flies up from below with a playing-card tilt,
+      // straightening as it lands on the pile.
+      if (index > 0) {
+        gsap.fromTo(
+          card,
+          { y: 160, rotate: index % 2 === 0 ? 6 : -6 },
+          {
+            y: 0,
+            rotate: 0,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: wrapper,
+              start: 'top bottom',
+              end: 'top top',
+              scrub: true,
+            },
+          }
+        )
+      }
+
+      // As the next cards slide over this one, push it "to the bottom":
+      // shrink it and dim it so the incoming card clearly stacks on top.
+      gsap.fromTo(
+        card,
+        { scale: 1, filter: 'brightness(1)' },
+        {
+          scale: targetScale,
+          filter: 'brightness(0.45)',
+          ease: 'none',
+          scrollTrigger: {
+            trigger: wrapper,
+            start: 'top top',
+            endTrigger: section,
+            end: 'bottom bottom',
+            scrub: true,
+          },
+        }
+      )
+    }, wrapper)
+
+    return () => ctx.revert()
+  }, [index, total, sectionRef])
+
+  const number = String(index + 1).padStart(2, '0')
+  const imageSrc = resolveImage(project.imageUrl)
+  const liveUrl = safeUrl(project.liveDemoUrl)
+  const githubUrl = safeUrl(project.githubUrl)
+  const gradient = PANEL_GRADIENTS[index % PANEL_GRADIENTS.length]
+
+  return (
+    <div
+      ref={wrapperRef}
+      className="sticky top-0 h-screen flex items-center justify-center"
+      style={{ zIndex: index + 1 }}
+    >
+      <div
+        ref={cardRef}
+        className="stack-card group w-full overflow-hidden
+                   rounded-[36px] sm:rounded-[44px] md:rounded-[52px]
+                   border border-[rgba(215,226,234,0.18)]
+                   flex flex-col md:flex-row
+                   transition-colors duration-500 hover:border-[rgba(182,0,168,0.6)]"
+        style={{
+          background:
+            'linear-gradient(145deg, rgba(215,226,234,0.05) 0%, rgba(12,12,12,0) 45%), #101014',
+          transformOrigin: 'center center',
+          willChange: 'transform',
+          boxShadow: '0 30px 80px rgba(0,0,0,0.55)',
+        }}
+      >
+        {/* ── Visual side ── */}
+        <div className="relative md:w-[55%] overflow-hidden h-[220px] sm:h-[280px] md:h-auto md:min-h-[480px]">
+          {imageSrc ? (
             <>
+              {/* blurred fill backdrop so any aspect ratio looks intentional */}
               <img
-                src={project.imageUrl.startsWith('http') ? project.imageUrl : `${BACKEND_URL}${project.imageUrl}`}
+                src={imageSrc}
+                alt=""
+                aria-hidden="true"
+                loading="lazy"
+                decoding="async"
+                className="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl"
+                style={{ opacity: 0.5, background: '#101014' }}
+              />
+              {/* full screenshot, never cropped */}
+              <img
+                src={imageSrc}
                 alt={project.title}
                 loading="lazy"
                 decoding="async"
-                className="absolute inset-0 w-full h-full object-contain object-center"
-                style={{ background: 'rgb(6,8,13)' }}
+                className="absolute inset-0 w-full h-full object-contain p-4 sm:p-6
+                           transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                style={{ filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.5))' }}
               />
-              <div className="absolute inset-0 bg-black/10 pointer-events-none" />
-              <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-[rgb(6,8,13)] to-transparent pointer-events-none" />
             </>
           ) : (
-            <>
-              <div className="absolute inset-0 bg-white/[0.02]" />
-              <div className="relative z-10 flex items-center justify-center h-full text-center px-4">
-                <span className="text-4xl font-bold text-white/[0.06]" style={{ letterSpacing: '-0.05em' }}>
-                  {project.title.split(' ').slice(0, 2).join(' ')}
-                </span>
-              </div>
-              <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-[rgb(6,8,13)] to-transparent pointer-events-none" />
-            </>
-          )}
-        </div>
-
-        {/* Text */}
-        <div className="flex flex-col flex-1 px-4 py-3 gap-2 overflow-y-auto">
-          {project.domain && (
-            <span className="inline-block self-start px-2.5 py-0.5 rounded-full text-[9px] font-medium uppercase tracking-widest bg-white/5 border border-white/10 text-white/50">
-              {project.domain}
-            </span>
-          )}
-          <h3 className="text-base font-medium text-white leading-snug">{project.title}</h3>
-          <p className="text-[11px] text-white/50 leading-relaxed line-clamp-3">{project.description}</p>
-          <div className="flex flex-wrap gap-1">
-            {project.techStack?.map((tech) => (
-              <span key={tech} className="px-2 py-0.5 rounded-lg text-[9px] font-medium bg-white/5 border border-white/10 text-white/60">
-                {tech}
+            <div
+              className="absolute inset-0 flex items-center justify-center"
+              style={{ background: gradient }}
+            >
+              <span
+                className="ticker-outline font-black uppercase text-center px-6 leading-none"
+                style={{ fontSize: 'clamp(2.4rem, 6vw, 5rem)' }}
+              >
+                {project.title.split(' ').slice(0, 2).join(' ')}
               </span>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-2 pt-1">
-            {safeUrl(project.liveDemoUrl) && (
-              <a href={safeUrl(project.liveDemoUrl)} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.stopPropagation(); onProjectClick?.(project); }}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-white/20 bg-white/5 text-white/80 text-[11px] font-medium transition-all duration-300 hover:bg-white/10 hover:text-white">
-                Live Demo <ExternalIcon />
-              </a>
-            )}
-            {safeUrl(project.githubUrl) && (
-              <a href={safeUrl(project.githubUrl)} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.stopPropagation(); onProjectClick?.(project); }}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-white/10 text-white/50 text-[11px] font-medium transition-all duration-300 hover:bg-white/5 hover:text-white/80">
-                <GithubIcon /> GitHub
-              </a>
-            )}
-          </div>
-        </div>
-      </div>
-    ) : (
-      /* ── Desktop layout: text left, decorative right ── */
-      <div className="flex flex-row h-full">
-        {/* Left text */}
-        <div className="flex flex-col justify-center w-[55%] shrink-0 px-8 xl:px-12 py-8 xl:py-10 space-y-4 xl:space-y-5 overflow-hidden">
-          {project.domain && (
-            <span className="inline-block self-start px-3 py-1 rounded-full text-[11px] font-medium uppercase tracking-widest bg-white/5 border border-white/10 text-white/50">
-              {project.domain}
-            </span>
-          )}
-          <h3 className="text-2xl lg:text-3xl xl:text-[2rem] font-medium text-white leading-snug">{project.title}</h3>
-          <p className="text-sm lg:text-base text-white/50 leading-relaxed">{project.description}</p>
-          <div className="flex flex-wrap gap-2">
-            {project.techStack?.map((tech) => (
-              <span key={tech} className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-white/5 border border-white/10 text-white/60">
-                {tech}
-              </span>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-3 pt-1">
-            {safeUrl(project.liveDemoUrl) && (
-              <a href={safeUrl(project.liveDemoUrl)} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.stopPropagation(); onProjectClick?.(project); }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/20 bg-white/5 text-white/80 text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:border-white/40 hover:text-white">
-                Live Demo <ExternalIcon />
-              </a>
-            )}
-            {safeUrl(project.githubUrl) && (
-              <a href={safeUrl(project.githubUrl)} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.stopPropagation(); onProjectClick?.(project); }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/10 text-white/50 text-sm font-medium transition-all duration-300 hover:bg-white/5 hover:border-white/20 hover:text-white/80">
-                <GithubIcon /> GitHub
-              </a>
-            )}
-          </div>
-        </div>
-
-        {/* Right image or decorative area */}
-        <div className="flex-1 relative border-l border-white/10 overflow-hidden">
-          {project.imageUrl ? (
-            <>
-              <img
-                src={project.imageUrl.startsWith('http') ? project.imageUrl : `${BACKEND_URL}${project.imageUrl}`}
-                alt={project.title}
-                loading="lazy"
-                decoding="async"
-                className="absolute inset-0 w-full h-full object-contain object-center transition-transform duration-700 group-hover:scale-[1.03]"
-                style={{ background: 'rgb(6,8,13)' }}
-              />
-              <div className="absolute inset-0 bg-black/10 pointer-events-none" />
-              <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-black/30 to-transparent pointer-events-none" />
-            </>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="absolute inset-0 bg-white/[0.01]" />
-              <div className="relative text-center px-6">
-                <span className="text-6xl xl:text-7xl font-bold text-white/[0.04]" style={{ letterSpacing: '-0.05em' }}>
-                  {project.title.split(' ').slice(0, 2).join(' ')}
-                </span>
-              </div>
             </div>
           )}
+
+          {/* gradient scrim so the visual melts into the card */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                'linear-gradient(to top, rgba(16,16,20,0.55) 0%, transparent 35%), linear-gradient(to right, transparent 70%, rgba(16,16,20,0.4) 100%)',
+            }}
+          />
+
+          {/* domain tag pinned on the image */}
+          <span
+            className="absolute top-5 left-5 sm:top-6 sm:left-6 inline-flex items-center gap-2
+                       px-3.5 py-1.5 rounded-full backdrop-blur-md
+                       font-medium uppercase tracking-[0.18em]"
+            style={{
+              background: 'rgba(12,12,12,0.55)',
+              border: '1px solid rgba(215,226,234,0.2)',
+              color: 'rgba(215,226,234,0.85)',
+              fontSize: 'clamp(0.55rem, 1vw, 0.7rem)',
+            }}
+          >
+            <span
+              aria-hidden="true"
+              style={{
+                width: 8,
+                height: 8,
+                background: 'linear-gradient(135deg, #B600A8, #BE4C00)',
+                clipPath:
+                  'polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%)',
+              }}
+            />
+            {project.domain}
+          </span>
+        </div>
+
+        {/* ── Content side ── */}
+        <div className="relative flex-1 flex flex-col gap-4 sm:gap-5 p-6 sm:p-8 md:p-10">
+          {/* giant watermark number */}
+          <span
+            aria-hidden="true"
+            className="ticker-outline absolute -top-2 right-4 sm:right-6 font-black leading-none select-none pointer-events-none
+                       transition-transform duration-500 group-hover:-translate-y-2"
+            style={{ fontSize: 'clamp(5rem, 12vw, 11rem)', opacity: 0.55 }}
+          >
+            {number}
+          </span>
+
+          <div className="flex flex-col gap-3 sm:gap-4 mt-8 sm:mt-12 md:mt-16 relative z-10">
+            <h3
+              className="hero-heading font-black uppercase leading-[0.95] tracking-tight
+                         transition-transform duration-300 group-hover:translate-x-1"
+              style={{ fontSize: 'clamp(1.8rem, 4vw, 3.4rem)' }}
+            >
+              {project.title}
+            </h3>
+
+            {project.description && (
+              <p
+                className="font-light leading-relaxed max-w-xl"
+                style={{
+                  color: 'rgba(215,226,234,0.55)',
+                  fontSize: 'clamp(0.85rem, 1.4vw, 1.05rem)',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 4,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
+                {project.description}
+              </p>
+            )}
+          </div>
+
+          {/* tech stack */}
+          <div className="flex flex-wrap gap-2 relative z-10">
+            {(project.techStack || []).slice(0, 6).map((tech) => (
+              <span
+                key={tech}
+                className="px-3 py-1.5 rounded-full border font-light uppercase tracking-wider whitespace-nowrap
+                           transition-all duration-300 hover:-translate-y-0.5
+                           hover:border-[rgba(182,0,168,0.6)] hover:text-white hover:bg-[rgba(182,0,168,0.08)]"
+                style={{
+                  borderColor: 'rgba(215,226,234,0.2)',
+                  color: 'rgba(215,226,234,0.65)',
+                  fontSize: 'clamp(0.6rem, 1vw, 0.75rem)',
+                }}
+              >
+                {tech}
+              </span>
+            ))}
+          </div>
+
+          {/* CTAs pinned to the bottom */}
+          <div className="flex flex-wrap items-center gap-3 mt-auto pt-2 relative z-10">
+            {liveUrl && (
+              <LiveProjectButton href={liveUrl} onClick={() => onProjectClick(project)} />
+            )}
+            {githubUrl && (
+              <a
+                href={githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => onProjectClick(project)}
+                className="inline-flex items-center gap-2 font-medium uppercase tracking-widest
+                           text-sm px-4 py-3 opacity-70 hover:opacity-100
+                           transition-all duration-300 hover:translate-x-1"
+                style={{ color: '#D7E2EA' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.4.6.1.82-.26.82-.58v-2.03c-3.34.73-4.04-1.6-4.04-1.6-.55-1.4-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49 1 .1-.78.42-1.31.76-1.61-2.66-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 016 0c2.28-1.55 3.29-1.23 3.29-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.8 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.83.58C20.56 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z" />
+                </svg>
+                Code
+              </a>
+            )}
+          </div>
         </div>
       </div>
-    )}
-  </div>
-)
+    </div>
+  )
+}
 
 // ── Main section ──────────────────────────────────────────────────────────────
 const Projects = () => {
   const sectionRef = useRef(null)
-  const headingRef = useRef(null)
-  const cardRefs = useRef([])
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
-  const CACHE_KEY = 'portfolio_projects'
-  const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
-
-  const addGradients = (list) =>
-    list.map((p, i) => ({ ...p, gradient: GRADIENTS[i % GRADIENTS.length] }))
-
-  const getCachedProjects = () => {
-    try {
-      const raw = sessionStorage.getItem(CACHE_KEY)
-      if (!raw) return null
-      const { data, ts } = JSON.parse(raw)
-      if (Date.now() - ts > CACHE_TTL) return null
-      return data
-    } catch { return null }
-  }
-
-  const setCachedProjects = (data) => {
-    try {
-      sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() }))
-    } catch { /* storage full — ignore */ }
-  }
 
   const cached = getCachedProjects()
-  const [projects, setProjects] = useState(() => cached ? addGradients(cached) : [])
+  const [projects, setProjects] = useState(() => cached || [])
   const [loading, setLoading] = useState(!cached)
 
-  // Fetch projects from API (skips if cache is fresh, background-refreshes otherwise)
   useEffect(() => {
     const fetchProjects = async () => {
       try {
         const data = await getProjects()
         const list = data.projects || []
         setCachedProjects(list)
-        setProjects(addGradients(list))
+        setProjects(list)
       } catch (error) {
         if (import.meta.env.DEV) console.error('Error fetching projects:', error)
-        if (projects.length === 0) setProjects([])
       } finally {
         setLoading(false)
       }
@@ -224,167 +320,64 @@ const Projects = () => {
     fetchProjects()
   }, [])
 
+  // Sticky layout changed after load — refresh trigger positions
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 768)
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
+    if (!loading) ScrollTrigger.refresh()
+  }, [loading, projects])
 
-  // Setup scroll animations once projects are loaded (desktop only)
-  useEffect(() => {
-    if (loading || projects.length === 0 || isMobile) return
-
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        headingRef.current,
-        { opacity: 0, y: 30 },
-        {
-          opacity: 1, y: 0, duration: 0.7, ease: 'power3.out',
-          scrollTrigger: {
-            trigger: headingRef.current,
-            start: 'top 88%',
-            toggleActions: 'play none none none',
-          },
-        }
-      )
-
-      const cards = cardRefs.current.filter(Boolean)
-      const total = cards.length
-      if (total <= 1) return
-
-      const sectionH = sectionRef.current?.offsetHeight || window.innerHeight
-      const vh = sectionH
-
-      cards.forEach((card, i) => gsap.set(card, { y: i === 0 ? 0 : vh }))
-
-      const tl = gsap.timeline({ paused: true })
-
-      cards.forEach((card, i) => {
-        if (i === total - 1) return
-        const seg = i / (total - 1)
-        const segDur = 1 / (total - 1)
-        tl.to(cards[i + 1], { y: 0, ease: 'none', duration: segDur }, seg)
-          .to(cards[i], { scale: 0.96, ease: 'none', duration: segDur }, seg)
-      })
-
-      ScrollTrigger.create({
-        trigger: sectionRef.current,
-        start: `top ${NAV_H}px`,
-        end: `+=${(total - 1) * vh}`,
-        pin: true,
-        pinSpacing: true,
-        anticipatePin: 1,
-        scrub: 1,
-        animation: tl,
-      })
-    }, sectionRef)
-
-    return () => ctx.revert()
-  }, [loading, projects, isMobile])
-
-  // Track project view when clicking external links
   const handleProjectClick = (project) => {
-    trackProjectView(project._id, project.title).catch(() => { })
+    trackProjectView(project._id, project.title).catch(() => {})
   }
 
-  if (loading) {
-    return (
-      <div id="projects" className="relative w-full px-5 sm:px-8 lg:px-16 py-20 sm:py-28 lg:py-36" style={{ zIndex: 10 }}>
-        <div className="w-full max-w-5xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-medium text-white mb-10 sm:mb-14" style={{ letterSpacing: '-0.03em' }}>
-            Projects that <span className="text-white/40">ship.</span>
-          </h2>
+  return (
+    <section
+      id="projects"
+      ref={sectionRef}
+      className="relative z-10 rounded-t-[40px] sm:rounded-t-[50px] md:rounded-t-[60px]
+                 -mt-10 sm:-mt-12 md:-mt-14
+                 px-5 sm:px-8 md:px-10 pt-20 sm:pt-24 md:pt-32 pb-24 sm:pb-32"
+      style={{ backgroundColor: '#0C0C0C' }}
+    >
+      <FadeIn delay={0} y={40}>
+        <h2
+          className="hero-heading font-black uppercase text-center leading-none tracking-tight
+                     mb-16 sm:mb-20 md:mb-28"
+          style={{ fontSize: 'clamp(3rem, 12vw, 160px)' }}
+        >
+          Projects
+        </h2>
+      </FadeIn>
+
+      <div className="max-w-6xl mx-auto">
+        {loading ? (
           <div className="flex flex-col gap-6">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="w-full h-48 sm:h-64 rounded-2xl border border-white/10 animate-pulse" style={{ background: 'rgba(255,255,255,0.03)' }} />
+              <div
+                key={i}
+                className="w-full h-64 sm:h-80 rounded-[40px] sm:rounded-[50px] md:rounded-[60px]
+                           border-2 animate-pulse"
+                style={{ borderColor: 'rgba(215,226,234,0.2)', background: 'rgba(215,226,234,0.03)' }}
+              />
             ))}
           </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (projects.length === 0) {
-    return (
-      <div id="projects" className="relative w-full px-5 sm:px-8 lg:px-16 py-20 sm:py-28 lg:py-36" style={{ zIndex: 10 }}>
-        <div className="w-full max-w-5xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-medium text-white mb-10 sm:mb-14" style={{ letterSpacing: '-0.03em' }}>
-            Projects that <span className="text-white/40">ship.</span>
-          </h2>
-          <p className="text-white/40 text-sm">Projects coming soon...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // ── Mobile: simple native-scroll list (no GSAP, no pinning) ──────────────────
-  if (isMobile) {
-    return (
-      <div id="projects" className="relative w-full px-3 pt-20 pb-10" style={{ zIndex: 10 }}>
-        <h2
-          ref={headingRef}
-          className="text-2xl font-medium text-white mb-6 px-1"
-          style={{ letterSpacing: '-0.03em' }}
-        >
-          Projects that <span className="text-white/40">ship.</span>
-        </h2>
-        <div className="flex flex-col gap-4">
-          {projects.map((project, i) => (
-            <div
+        ) : projects.length === 0 ? (
+          <p className="text-center font-light" style={{ color: 'rgba(215,226,234,0.4)' }}>
+            Projects coming soon...
+          </p>
+        ) : (
+          projects.map((project, i) => (
+            <ProjectCard
               key={project._id}
-              style={{ height: '340px', borderRadius: '1rem', overflow: 'hidden' }}
-            >
-              <CardContent project={project} isMobile={true} onProjectClick={handleProjectClick} />
-            </div>
-          ))}
-        </div>
+              project={project}
+              index={i}
+              total={projects.length}
+              sectionRef={sectionRef}
+              onProjectClick={handleProjectClick}
+            />
+          ))
+        )}
       </div>
-    )
-  }
-
-  // ── Desktop: pinned scroll stack ──────────────────────────────────────────────
-  return (
-    <>
-      {/* Heading */}
-      <div
-        ref={headingRef}
-        className="relative px-4 sm:px-6 lg:px-8 pt-20 sm:pt-28 lg:pt-32 pb-0 max-w-6xl mx-auto"
-        style={{ zIndex: 10 }}
-      >
-        <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-medium text-white leading-tight">
-          Projects that <span className="text-white/40">ship.</span>
-        </h2>
-      </div>
-
-      {/* Pinned stack */}
-      <section
-        id="projects"
-        ref={sectionRef}
-        style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden', zIndex: 10 }}
-      >
-        {projects.map((project, i) => (
-          <div
-            key={project._id}
-            ref={(el) => (cardRefs.current[i] = el)}
-            style={{
-              position: 'absolute',
-              top: `${NAV_H + 8}px`,
-              bottom: '24px',
-              left: 'clamp(16px, 3vw, 48px)',
-              right: 'clamp(16px, 3vw, 48px)',
-              maxWidth: '82rem',
-              marginLeft: 'auto',
-              marginRight: 'auto',
-              zIndex: i + 1,
-              willChange: 'transform',
-              transform: 'translateZ(0)',
-            }}
-          >
-            <CardContent project={project} isMobile={false} onProjectClick={handleProjectClick} />
-          </div>
-        ))}
-      </section>
-    </>
+    </section>
   )
 }
 

@@ -293,10 +293,13 @@ const ProjectFormModal = ({ project, onSave, onClose }) => {
             </div>
 
             <button type="submit" disabled={saving || uploadingImage}
-              className="w-full rounded-xl font-medium text-white text-sm py-3 transition-all duration-300"
+              className="w-full rounded-full font-medium text-white text-sm uppercase tracking-widest py-3 transition-all duration-300"
               style={{
-                background: 'rgba(255,255,255,0.09)',
-                border: '1px solid rgba(255,255,255,0.18)',
+                background: 'linear-gradient(123deg, #18011F 7%, #B600A8 37%, #7621B0 72%, #BE4C00 100%)',
+                boxShadow: '0px 4px 4px rgba(181, 1, 167, 0.25), 4px 4px 12px #7721B1 inset',
+                outline: '2px solid #FFFFFF',
+                outlineOffset: '-3px',
+                border: 'none',
                 opacity: saving ? 0.55 : 1,
                 cursor: saving ? 'not-allowed' : 'pointer',
               }}>
@@ -434,7 +437,7 @@ const GithubImportModal = ({ onClose, onImported }) => {
                   disabled={importing !== null}
                   className="shrink-0 px-4 py-2 rounded-xl text-xs font-medium text-white transition-all duration-200"
                   style={{
-                    background: importing === repo.name ? 'rgba(139,92,246,0.3)' : 'rgba(255,255,255,0.06)',
+                    background: importing === repo.name ? 'rgba(182,0,168,0.3)' : 'rgba(255,255,255,0.06)',
                     border: '1px solid rgba(255,255,255,0.12)',
                     opacity: (importing && importing !== repo.name) ? 0.4 : 1,
                     cursor: importing ? 'not-allowed' : 'pointer',
@@ -525,7 +528,7 @@ const AdminDashboard = () => {
     try {
       await adminLogout()
       navigate('/admin')
-    } catch (err) {
+    } catch {
       // Even if logout fails, redirect to login
       navigate('/admin')
     }
@@ -560,7 +563,7 @@ const AdminDashboard = () => {
   ]
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#000' }}>
+    <div className="min-h-screen" style={{ backgroundColor: '#0C0C0C' }}>
       <SEO
         title="Admin Dashboard | Lightnos.dev"
         description="Admin dashboard for managing portfolio projects and analytics"
@@ -568,9 +571,9 @@ const AdminDashboard = () => {
       {/* Background glow */}
       <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
         <div className="absolute w-[500px] h-[500px] rounded-full opacity-8"
-          style={{ backgroundColor: '#8B5CF6', filter: 'blur(120px)', left: '10%', top: '5%' }} />
+          style={{ backgroundColor: '#B600A8', filter: 'blur(120px)', left: '10%', top: '5%' }} />
         <div className="absolute w-[400px] h-[400px] rounded-full opacity-6"
-          style={{ backgroundColor: '#93C5FD', filter: 'blur(100px)', right: '10%', bottom: '20%' }} />
+          style={{ backgroundColor: '#7621B0', filter: 'blur(100px)', right: '10%', bottom: '20%' }} />
       </div>
 
       {/* Top bar */}
@@ -710,9 +713,9 @@ const AdminDashboard = () => {
                             <Line
                               type="monotone"
                               dataKey="visits"
-                              stroke="rgba(139,92,246,0.8)"
+                              stroke="rgba(182,0,168,0.8)"
                               strokeWidth={2}
-                              dot={{ fill: 'rgba(139,92,246,0.6)', r: 3 }}
+                              dot={{ fill: 'rgba(182,0,168,0.6)', r: 3 }}
                               activeDot={{ r: 5 }}
                             />
                           </LineChart>
@@ -748,7 +751,7 @@ const AdminDashboard = () => {
                                 color: '#fff',
                               }}
                             />
-                            <Bar dataKey="views" fill="rgba(147,197,253,0.6)" radius={[0, 4, 4, 0]} />
+                            <Bar dataKey="views" fill="rgba(215,226,234,0.6)" radius={[0, 4, 4, 0]} />
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
@@ -787,8 +790,13 @@ const AdminDashboard = () => {
                   Projects <span className="text-white/30 text-lg">({projects.length})</span>
                 </h2>
                 <button onClick={() => { setEditingProject(null); setShowProjectForm(true) }}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white transition-all duration-200"
-                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}>
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium text-white uppercase tracking-wider transition-all duration-200"
+                  style={{
+                    background: 'linear-gradient(123deg, #18011F 7%, #B600A8 37%, #7621B0 72%, #BE4C00 100%)',
+                    boxShadow: '0px 4px 4px rgba(181, 1, 167, 0.25), 4px 4px 12px #7721B1 inset',
+                    outline: '2px solid #FFFFFF',
+                    outlineOffset: '-3px',
+                  }}>
                   <PlusIcon /> New Project
                 </button>
               </div>
@@ -875,8 +883,13 @@ const AdminDashboard = () => {
                 </div>
               </div>
               <button onClick={() => setShowGithubImport(true)}
-                className="inline-flex items-center gap-2.5 px-5 py-3 rounded-xl text-sm font-medium text-white transition-all duration-200"
-                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}>
+                className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full text-sm font-medium text-white uppercase tracking-wider transition-all duration-200"
+                style={{
+                  background: 'linear-gradient(123deg, #18011F 7%, #B600A8 37%, #7621B0 72%, #BE4C00 100%)',
+                  boxShadow: '0px 4px 4px rgba(181, 1, 167, 0.25), 4px 4px 12px #7721B1 inset',
+                  outline: '2px solid #FFFFFF',
+                  outlineOffset: '-3px',
+                }}>
                 <GithubIcon /> Browse Repositories
               </button>
             </div>
